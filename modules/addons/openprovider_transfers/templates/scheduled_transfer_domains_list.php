@@ -34,7 +34,7 @@ function generatePaginationUrl($page, $countPerPage) {
 ?>
 
 <a href="?module=openprovider_transfers&action=scheduled_domain_transfer_transfers" class="btn btn-default">
-    scheduled domain transfer transfers
+    Scheduled domain transfer transfers
 </a>
 <a href="?module=openprovider_transfers&action=requested_transfers" class="btn btn-default">
     Requested transfers
@@ -47,6 +47,9 @@ function generatePaginationUrl($page, $countPerPage) {
 </a>
 <a href="?module=openprovider_transfers&action=export_csv" class="btn btn-default">
     Export as CSV
+</a>
+<a href="?module=openprovider_transfers&action=load_scheduled_transfers" class="btn btn-danger">
+    Load scheduled transfers (2 - 5 minutes)
 </a>
 <a href="?module=openprovider_transfers&action=remove_all" class="btn btn-danger    ">
     Remove list
@@ -78,7 +81,7 @@ function generatePaginationUrl($page, $countPerPage) {
     <?php foreach ($domains as $item): ?>
         <tr>
             <td><?php echo $item['domain'] ?></td>
-            <td><?php echo $item['finished_transfer_date'] ?></td>
+            <td><?php echo $item['scheduled_at'] ?></td>
             <td><?php echo $item['op_status'] ?></td>
         </tr>
     <?php endforeach; ?>

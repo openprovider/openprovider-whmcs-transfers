@@ -41,7 +41,7 @@ class ScheduledDomainTransfer
                         $scheduledDomain['domain']['name'], $scheduledDomain['domain']['extension']),
                 ];
                 $domainDataToUpdate = [
-                    'finished_transfer_date' => $scheduledDomain['scheduledAt'],
+                    'scheduled_at' => $scheduledDomain['scheduledAt'],
                     'created_at' => Carbon::now(),
                     'updated_at' => Carbon::now(),
                 ];
@@ -52,7 +52,7 @@ class ScheduledDomainTransfer
                             '%s.%s',
                             $scheduledDomain['domain']['name'], $scheduledDomain['domain']['extension']),
                     ], [
-                        'finished_transfer_date' => $scheduledDomain['scheduledAt'],
+                        'scheduled_at' => $scheduledDomain['scheduledAt'],
                         'created_at' => Carbon::now(),
                         'updated_at' => Carbon::now(),
                     ]);
@@ -145,7 +145,7 @@ class ScheduledDomainTransfer
                 ->where('domain_id', $domainId)
                 ->where('domain', $domainName)
                 ->update([
-                    'finished_transfer_date' => $scheduledTransferDate
+                    'scheduled_at' => $scheduledTransferDate
                 ]);
         } catch (\Exception $e) {
             return [
@@ -154,7 +154,7 @@ class ScheduledDomainTransfer
         }
 
         return [
-            'abortWithSuccess' => false,
+            'abortWithSuccess' => true,
         ];
     }
 
@@ -178,7 +178,7 @@ class ScheduledDomainTransfer
         try {
             $scheduledTransferDomains = Capsule::table(self::DATABASE_TRANSFER_SCHEDULED_DOMAINS_NAME)
                 ->where('domain_id', '!=', null)
-                ->orderBy('finished_transfer_date', 'ASC')
+                ->orderBy('scheduled_at', 'ASC')
                 ->orderBy('domain', 'ASC')
                 ->skip(($page - 1) * $numberPerPage)
                 ->take($numberPerPage)
@@ -223,6 +223,7 @@ class ScheduledDomainTransfer
                         $table->increments('id');
                         $table->integer('domain_id')->nullable();
                         $table->string('domain', '100');
+                        $table->date('scheduled_at')->nullable();
                         $table->date('finished_transfer_date');
                         $table->string('op_status', '30')->default('SCH');
                         // Maybe it's not necessary
