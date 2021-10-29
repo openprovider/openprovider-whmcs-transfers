@@ -19,8 +19,6 @@ add_hook('DailyCronJob', 1, function () {
     $scheduledDomainTransfer->updateScheduledTransferTable();
 
     $scheduledDomainTransfer->linkDomainsToWhmcsDomains();
-
-    $scheduledDomainTransfer->checkDomainsRequestedForTransfer();
 });
 
 add_hook('PreRegistrarRenewDomain', 1, function ($vars) {
