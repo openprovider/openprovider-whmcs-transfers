@@ -136,8 +136,7 @@ class ScheduledDomainTransfer
         try {
             Capsule::update(
                 "update `tbldomains` set registrar='openprovider', 
-                        status='Pending Transfer', 
-                        registrationdate='2021-05-10'
+                        status='Pending Transfer'
                     where id={$domainId}"
             );
 
@@ -146,6 +145,17 @@ class ScheduledDomainTransfer
                 ->where('domain', $domainName)
                 ->update([
                     'scheduled_at' => $scheduledTransferDate
+                ]);
+
+            $today = Carbon::today()->format('Y-m-d');
+
+            Capsule::table('tbltodolist')
+                ->insert([
+                    'date' => $today,
+                    'title' => 'Transfer between registrars',
+                    'description' => "{$domainName} has been triggered for transfer into Openprovider, and the registrar in whmcs has been changed to Openprovider.",
+                    'status' => 'Pending',
+                    'duedate' => $today,
                 ]);
         } catch (\Exception $e) {
             return [
@@ -176,11 +186,12 @@ class ScheduledDomainTransfer
     {
         $scheduledTransferDomains = [];
         try {
+            $limit = ($page - 1) * $numberPerPage;
             $scheduledTransferDomains = Capsule::table(self::DATABASE_TRANSFER_SCHEDULED_DOMAINS_NAME)
-                ->where('domain_id', '!=', null)
+                ->whereNotNull('domain_id')
                 ->orderBy('scheduled_at', 'ASC')
                 ->orderBy('domain', 'ASC')
-                ->skip(($page - 1) * $numberPerPage)
+                ->skip($limit)
                 ->take($numberPerPage)
                 ->get();
         } catch (\Exception $e) {
@@ -202,7 +213,7 @@ class ScheduledDomainTransfer
     {
         try {
             return Capsule::table(self::DATABASE_TRANSFER_SCHEDULED_DOMAINS_NAME)
-                ->where('domain_id', '!=', null)
+                ->whereNotNull('domain_id')
                 ->count();
         } catch (\Exception $e) {
             return 0;
@@ -231,11 +242,11 @@ class ScheduledDomainTransfer
                         $table->timestamps();
                     });
 
-            Capsule::schema()->table(
-                self::DATABASE_TRANSFER_SCHEDULED_DOMAINS_NAME,
-                function (Blueprint $table) {
-                    $table->foreign('domain_id')->references('id')->on('tbldomains')
-                        ->onDelete('cascade');
+                Capsule::schema()->table(
+                    self::DATABASE_TRANSFER_SCHEDULED_DOMAINS_NAME,
+                    function (Blueprint $table) {
+                        $table->foreign('domain_id')->references('id')->on('tbldomains')
+                            ->onDelete('cascade');
                 });
         } catch (\Exception $e) {
             return [

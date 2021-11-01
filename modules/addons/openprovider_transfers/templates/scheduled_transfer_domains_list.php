@@ -48,10 +48,13 @@ function generatePaginationUrl($page, $countPerPage) {
 <a href="?module=openprovider_transfers&action=export_csv" class="btn btn-default">
     Export as CSV
 </a>
+<a href="?module=openprovider_transfers&action=update_statuses" class="btn btn-success">
+    Update statuses (2 - 5 minutes)
+</a>
 <a href="?module=openprovider_transfers&action=load_scheduled_transfers" class="btn btn-danger">
     Load scheduled transfers (2 - 5 minutes)
 </a>
-<a href="?module=openprovider_transfers&action=remove_all" class="btn btn-danger    ">
+<a href="?module=openprovider_transfers&action=remove_all" class="btn btn-danger">
     Remove list
 </a>
 
@@ -68,8 +71,6 @@ function generatePaginationUrl($page, $countPerPage) {
 <?php if ($lastPage < $pageCount) : ?>
     &#32;<a href="<?php echo generatePaginationUrl($lastPage, $numberPerPage)?>">></a>
 <?php endif; ?>
-
-
 
 <table width="100%" cellspacing="1" cellpadding="3" border="0" class="datatable">
     <tbody>

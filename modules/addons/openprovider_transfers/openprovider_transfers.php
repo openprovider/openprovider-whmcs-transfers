@@ -160,6 +160,24 @@ function openprovider_transfers_output_scheduled_transfer_domains($params)
         } catch (\Exception $e) {
             $view['error'] = $e->getMessage();
         }
+    }  else if ($action == 'update_statuses') {
+        // Get domains with domain_id and OP status SCH
+        $domains = Capsule::select("
+            select domain, id, op_status from mod_openprovider_transfers_scheduled_domain_transfer
+            where domain_id and op_status='SCH'
+        ");
+
+        foreach ($domains as $domain) {
+            $domainOp = $addonHelper->sendRequest('retrieveDomainRequest', [
+                'domain' => $addonHelper->getDomainArray($domain->domain),
+            ]);
+
+            Capsule::table('mod_openprovider_transfers_scheduled_domain_transfer')
+                ->where('id', $domain->id)
+                ->update([
+                    'op_status' => $domainOp['status']
+                ]);
+        }
     } else {
         $domainsNumber = $scheduledDomainTransfer->getScheduledTransferDomainsNumber();
         $scheduledTransferDomains = $scheduledDomainTransfer->getScheduledTransferDomains((int) $page, (int) $numberPerPage);

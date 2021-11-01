@@ -66,4 +66,14 @@ class OpenproviderTransfersAddonHelper
             }
         }
     }
+
+    public function getDomainArray($domainName)
+    {
+        $explodeDomain = explode('.', $domainName);
+
+        return [
+            'name' => $explodeDomain[0],
+            'extension' => str_replace($explodeDomain[0] . '.', '', $domainName)
+        ];
+    }
 }
