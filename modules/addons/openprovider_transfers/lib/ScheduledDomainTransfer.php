@@ -42,8 +42,6 @@ class ScheduledDomainTransfer
                 ];
                 $domainDataToUpdate = [
                     'scheduled_at' => $scheduledDomain['scheduledAt'],
-                    'created_at' => Carbon::now(),
-                    'updated_at' => Carbon::now(),
                 ];
 
                 Capsule::table(self::DATABASE_TRANSFER_SCHEDULED_DOMAINS_NAME)
@@ -53,8 +51,6 @@ class ScheduledDomainTransfer
                             $scheduledDomain['domain']['name'], $scheduledDomain['domain']['extension']),
                     ], [
                         'scheduled_at' => $scheduledDomain['scheduledAt'],
-                        'created_at' => Carbon::now(),
-                        'updated_at' => Carbon::now(),
                     ]);
 
                 $result[] = array_merge($domainDataToInsert, $domainDataToUpdate);
@@ -131,24 +127,28 @@ class ScheduledDomainTransfer
         }
 
         // Update registrar to openprovider
-        // Update status to Pending Transfer
-        // Abort the renew because our operation was a success
+        //
+        // Save transfer scheduled date and prev registrar
+        //
+        // Create todoitem in whmcs' todolist
+        //
+        // Abort the renew with success, because our operation was a success
         try {
-            Capsule::update(
-                "update `tbldomains` set registrar='openprovider', 
-                        status='Pending Transfer'
-                    where id={$domainId}"
-            );
+            Capsule::table('tbldomains')
+                ->where('id', $domainId)
+                ->update([
+                    'registrar' => 'openprovider'
+                ]);
 
             Capsule::table(self::DATABASE_TRANSFER_SCHEDULED_DOMAINS_NAME)
                 ->where('domain_id', $domainId)
                 ->where('domain', $domainName)
                 ->update([
-                    'scheduled_at' => $scheduledTransferDate
+                    'scheduled_at' => $scheduledTransferDate,
+                    'prev_registrar' => $params['registrar']
                 ]);
 
             $today = Carbon::today()->format('Y-m-d');
-
             Capsule::table('tbltodolist')
                 ->insert([
                     'date' => $today,
@@ -237,9 +237,11 @@ class ScheduledDomainTransfer
                         $table->date('scheduled_at')->nullable();
                         $table->date('finished_transfer_date');
                         $table->string('op_status', '30')->default('SCH');
+                        $table->string('prev_registrar')->nullable();
+                        $table->tinyInteger('informed_below_two_weeks', false, true)->default(0);
+                        $table->dateTime('synced_at')->nullable();
                         // Maybe it's not necessary
                         // $table->string('run_id', 100)->nullable();
-                        $table->timestamps();
                     });
 
                 Capsule::schema()->table(
