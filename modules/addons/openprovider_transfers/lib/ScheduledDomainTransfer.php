@@ -193,14 +193,18 @@ class ScheduledDomainTransfer
                 ->orderBy('domain', 'ASC')
                 ->skip($limit)
                 ->take($numberPerPage)
-                ->get()
-                ->toArray();
-
+                ->get();
         } catch (\Exception $e) {
             return [
                 'error' => $e->getMessage(),
             ];
         }
+
+        // If Capsule returns Collection we need to make array
+        if (!is_array($scheduledTransferDomains)) {
+            $scheduledTransferDomains = $scheduledTransferDomains->toArray();
+        }
+
         if (!empty($scheduledTransferDomains)) {
             return array_map(function ($item) {
                 return (array) $item;
