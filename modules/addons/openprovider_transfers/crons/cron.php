@@ -96,7 +96,7 @@ foreach ($scheduledDomains as $scheduledDomain) {
                     'status' => 'Active',
                 ]);
             break;
-        case 'PEN':
+        case 'REQ':
             Capsule::table('tbldomains')
                 ->where('id', $scheduledDomain->domain_id)
                 ->update([
