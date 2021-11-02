@@ -193,13 +193,14 @@ class ScheduledDomainTransfer
                 ->orderBy('domain', 'ASC')
                 ->skip($limit)
                 ->take($numberPerPage)
-                ->get();
+                ->get()
+                ->toArray();
+
         } catch (\Exception $e) {
             return [
                 'error' => $e->getMessage(),
             ];
         }
-
         if (!empty($scheduledTransferDomains)) {
             return array_map(function ($item) {
                 return (array) $item;
