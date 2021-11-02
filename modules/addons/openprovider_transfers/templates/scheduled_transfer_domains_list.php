@@ -54,6 +54,9 @@ function generatePaginationUrl($page, $countPerPage) {
 <a href="?module=openprovider_transfers&action=load_scheduled_transfers" class="btn btn-danger">
     Load scheduled transfers (2 - 5 minutes)
 </a>
+<a href="?module=openprovider_transfers&action=remove_all_fai" class="btn btn-danger">
+    Remove only FAI scheduled domains
+</a>
 <a href="?module=openprovider_transfers&action=remove_all" class="btn btn-danger">
     Remove list
 </a>

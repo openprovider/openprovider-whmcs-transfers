@@ -154,6 +154,10 @@ function openprovider_transfers_output_scheduled_transfer_domains($params)
                     break;
             }
         }
+    } elseif ($action == 'remove_all_fai') {
+        Capsule::table('mod_openprovider_transfers_scheduled_domain_transfer')
+            ->where('op_status', 'FAI')
+            ->delete();
     }
 
     if ($action == 'remove_all') {
