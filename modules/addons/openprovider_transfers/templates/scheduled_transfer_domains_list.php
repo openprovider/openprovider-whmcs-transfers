@@ -29,7 +29,25 @@ if ($lastPage > $pageCount) {
 }
 
 function generatePaginationUrl($page, $countPerPage) {
-    return "?module=openprovider_transfers&p={$page}&n={$countPerPage}";
+    $queries = explode('&amp;', parse_url(basename($_SERVER['REQUEST_URI']))['query']);
+    $queriesArray = [];
+    foreach ($queries as $query) {
+        $tmp = explode('=', $query);
+        if (!$tmp[0]) {
+            continue;
+        }
+        $queriesArray[$tmp[0]] = $tmp[1];
+    }
+
+    $queriesArray['p'] = $page;
+    $queriesArray['n'] = $countPerPage;
+
+    $result = '?';
+    foreach ($queriesArray as $key => $value) {
+        $result .= $key . '=' . $value . '&';
+    }
+
+    return $result;
 }
 ?>
 
