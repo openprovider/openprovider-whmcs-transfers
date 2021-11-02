@@ -45,6 +45,9 @@ $addonHelper->loadCredentialsFromDatabase();
 $scheduledDomainTransfer = new ScheduledDomainTransfer();
 $scheduledDomainTransfer->setAddonHelper($addonHelper);
 
+// Get scheduled domains with statuses not equals ACT/FAI and synced_at older than 2 hours.
+// Limit is 30 rows per time.
+$edgedDatetimeToSync = Carbon::now()->subHours(2)->toDateTimeString();
 $scheduledDomains = Capsule::select("
     select motsdt.domain_id,
            motsdt.domain,
@@ -55,43 +58,13 @@ $scheduledDomains = Capsule::select("
     from mod_openprovider_transfers_scheduled_domain_transfer as motsdt
     inner join tbldomains
     on motsdt.domain_id = tbldomains.id
-    where motsdt.domain_id and motsdt.op_status <> 'ACT' and motsdt.op_status <> 'FAI'
+    where 
+          motsdt.domain_id 
+      and motsdt.op_status <> 'ACT' 
+      and motsdt.op_status <> 'FAI'
+      and (motsdt.synced_at is NULL or motsdt.synced_at < '{$edgedDatetimeToSync}')
+    limit 30;
 ");
-
-//$scheduledDomains = [
-//    new stdClass(),
-//    new stdClass(),
-//    new stdClass(),
-//    new stdClass()
-//];
-//
-//$scheduledDomains[0]->domain = 'test-domain-qwe2.com';
-//$scheduledDomains[0]->domain_id = 1;
-//$scheduledDomains[0]->op_status = 'ACT';
-//$scheduledDomains[0]->prev_registrar = '';
-//$scheduledDomains[0]->informed_below_two_weeks = 0;
-//$scheduledDomains[0]->expirydate = '2021-11-01';
-//
-//$scheduledDomains[1]->domain = 'schtest-vvhc-1.com';
-//$scheduledDomains[1]->domain_id = 2;
-//$scheduledDomains[1]->op_status = 'PEN';
-//$scheduledDomains[1]->prev_registrar = '';
-//$scheduledDomains[1]->informed_below_two_weeks = 0;
-//$scheduledDomains[1]->expirydate = '2021-10-17';
-//
-//$scheduledDomains[2]->domain = 'schtest-fetm-1.com';
-//$scheduledDomains[2]->domain_id = 4;
-//$scheduledDomains[2]->op_status = 'FAI';
-//$scheduledDomains[2]->prev_registrar = 'enom';
-//$scheduledDomains[2]->informed_below_two_weeks = 0;
-//$scheduledDomains[2]->expirydate = '2021-11-04';
-//
-//$scheduledDomains[3]->domain = 'schtest-qmkh-7.com';
-//$scheduledDomains[3]->domain_id = 3;
-//$scheduledDomains[3]->op_status = 'PEN';
-//$scheduledDomains[3]->prev_registrar = '';
-//$scheduledDomains[3]->informed_below_two_weeks = 1;
-//$scheduledDomains[3]->expirydate = '2021-11-04';
 
 foreach ($scheduledDomains as $scheduledDomain) {
     $syncedAt = Carbon::now();
