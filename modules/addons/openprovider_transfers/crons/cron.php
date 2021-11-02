@@ -97,6 +97,7 @@ foreach ($scheduledDomains as $scheduledDomain) {
                 ]);
             break;
         case 'REQ':
+            // Set Pending transfer status
             Capsule::table('tbldomains')
                 ->where('id', $scheduledDomain->domain_id)
                 ->update([
@@ -126,11 +127,22 @@ foreach ($scheduledDomains as $scheduledDomain) {
             }
             break;
         case 'FAI':
+            // Return previous registrar and set status Active
+            // Add todoitem to todolist with failed information
             Capsule::table('tbldomains')
                 ->where('id', $scheduledDomain->domain_id)
                 ->update([
                     'status' => 'Active',
                     'registrar' => $scheduledDomain->prev_registrar
+                ]);
+
+            Capsule::table()
+                ->insert([
+                    'title' => 'Domain transfer to Openprovider failed',
+                    'description' => "{$scheduledDomain->domain} has status FAI in Openprovider",
+                    'status' => 'Pending',
+                    'date' => $syncedAt->toDateString(),
+                    'duedate' => $syncedAt->toDateString(),
                 ]);
             break;
     }
