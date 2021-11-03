@@ -5,8 +5,6 @@ use WHMCS\Database\Capsule;
 
 class OpenproviderTransfersAddonHelper
 {
-    const DATABASE_TRANSFER_SCHEDULED_DOMAINS_NAME = 'mod_openprovider_transfers_scheduled_domain_transfer';
-
     private $username;
     private $password;
     private $apiClient;
@@ -75,5 +73,17 @@ class OpenproviderTransfersAddonHelper
             'name' => $explodeDomain[0],
             'extension' => str_replace($explodeDomain[0] . '.', '', $domainName)
         ];
+    }
+
+    public function fromCollectionOrObjectToArray($collectionOrObject)
+    {
+        // If $collectionOrObject is Illuminate\Support\Collection
+        if (!is_array($collectionOrObject)) {
+            $collectionOrObject = $collectionOrObject->toArray();
+        }
+
+        return array_map(function ($item) {
+            return (array) $item;
+        }, $collectionOrObject);
     }
 }

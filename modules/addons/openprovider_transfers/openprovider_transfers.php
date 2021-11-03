@@ -188,7 +188,7 @@ function openprovider_transfers_output_scheduled_transfer_domains($params)
             // Select all domains that have expiry date bigger than today
             $scheduledTransferDomains = Capsule::select("
                 select * from mod_openprovider_transfers_scheduled_domain_transfer
-                where op_status <> 'FAI' and domain_id 
+                where (op_status = 'SCH' or op_status = 'REQ') and domain_id
                 in (
                     select id from tbldomains where expirydate > CURRENT_DATE() 
                     order by expirydate
@@ -211,19 +211,20 @@ function openprovider_transfers_output_scheduled_transfer_domains($params)
     } else if ($action == 'failed_transfers') {
         try {
             $offset = ((int)$page - 1) * ((int) $numberPerPage);
-            $untilDate = Carbon::now()->subDays(14)->format('Y-m-d');
+            $untilDate = Carbon::now()->addDays(14)->format('Y-m-d');
             // Select all domains that have expiry date bigger than today
             $scheduledTransferDomains = Capsule::select("
                 select * from mod_openprovider_transfers_scheduled_domain_transfer
-                where (op_status = 'FAI' or op_status = 'REQ')
+                where op_status = 'FAI' or op_status = 'REQ'
                 and domain_id
                 in (
-                    select id from tbldomains where expirydate > {$untilDate} and expirydate < CURRENT_DATE()
+                    select id from tbldomains where expirydate < '{$untilDate}' and expirydate > CURRENT_DATE()
                     order by expirydate
                 )
                 order by domain
                 limit {$numberPerPage} offset {$offset}
             ");
+
             $domainsNumber = count($scheduledTransferDomains);
             $view['scheduled_transfer_domains'] = array_map(function ($item) {
                 return (array) $item;
@@ -246,6 +247,7 @@ function openprovider_transfers_output_scheduled_transfer_domains($params)
                 order by finished_transfer_date, domain
                 limit {$numberPerPage} offset {$offset}
             ");
+
             $domainsNumber = count($scheduledTransferDomains);
             $view['scheduled_transfer_domains'] = array_map(function ($item) {
                 return (array) $item;

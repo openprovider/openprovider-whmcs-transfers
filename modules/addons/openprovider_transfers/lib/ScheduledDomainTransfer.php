@@ -200,18 +200,7 @@ class ScheduledDomainTransfer
             ];
         }
 
-        // If Capsule returns Collection we need to make array
-        if (!is_array($scheduledTransferDomains)) {
-            $scheduledTransferDomains = $scheduledTransferDomains->toArray();
-        }
-
-        if (!empty($scheduledTransferDomains)) {
-            return array_map(function ($item) {
-                return (array) $item;
-            }, $scheduledTransferDomains);
-        }
-
-        return $scheduledTransferDomains;
+        return $this->addonHelper->fromCollectionOrObjectToArray($scheduledTransferDomains);
     }
 
     public function getScheduledTransferDomainsNumber()
