@@ -60,6 +60,75 @@ function openprovider_transfers_output_scheduled_transfer_domains($params)
     $scheduledDomainTransfer->setAddonHelper($addonHelper);
 
     $action = $_REQUEST['action'] ?? '';
+
+    if ($action == 'export_csv') {
+        $header = [
+            'Domain',
+            'Current registrar',
+            'Due date',
+            'Scheduled transfer date',
+            'Transfer status',
+        ];
+        $transferStatuses = [
+            'SCH' => 'scheduled',
+            'ACT' => 'successfully transferred',
+            'FAI' => 'failed',
+            'REQ' => 'transfer requested',
+        ];
+
+        $systemUrl = explode('/', localAPI('GetConfigurationValue', [
+            'setting' => 'systemURL'
+        ])['value']);
+        unset($systemUrl[count($systemUrl) - 1]);
+
+        $lastElement = end($systemUrl);
+        $whmcsAddress = substr(
+            $_SERVER['HTTP_REFERER'],
+            0,
+            strpos($_SERVER['HTTP_REFERER'], $lastElement) + strlen($lastElement)
+        );
+        $csvFileAddress = $whmcsAddress . '/modules/addons/openprovider_transfers';
+
+        $delimiter = ',';
+        $filename = "/tmp/data_" . date('Y-m-d') . ".csv";
+
+        if (!is_dir(__DIR__ . "/tmp")) {
+            mkdir(__DIR__ . '/tmp');
+        }
+
+        $f = fopen(__DIR__ . $filename, 'w');
+
+        fputcsv($f, $header, $delimiter);
+
+        $dataToSaveAsCsv = Capsule::select("
+            select motsdt.domain, motsdt.scheduled_at, motsdt.op_status,
+                   tbldomains.nextduedate, tbldomains.registrar
+            from mod_openprovider_transfers_scheduled_domain_transfer as motsdt
+            inner join tbldomains
+            on motsdt.domain_id = tbldomains.id
+        ");
+
+        foreach ($dataToSaveAsCsv as $item) {
+            $fields = [
+                $item->domain,
+                $item->registrar,
+                $item->nextduedate,
+                $item->scheduled_at,
+                $transferStatuses[$item->op_status]
+            ];
+            fputcsv($f, $fields, $delimiter);
+        }
+
+        // Move back to beginning of file
+        fseek($f, 0);
+        fclose($f);
+
+        $views['filepath'] = $csvFileAddress . $filename;
+
+        require __DIR__ . '/templates/download_csv.php';
+        return;
+    }
+
     $page = $_REQUEST['p'] ?? '1';
     $numberPerPage = $_REQUEST['n'] ?? '30';
 

@@ -63,7 +63,7 @@ function generatePaginationUrl($page, $countPerPage) {
 <a href="?module=openprovider_transfers&action=completed_transfers" class="btn btn-default">
     Completed transfers
 </a>
-<a href="?module=openprovider_transfers&action=export_csv" class="btn btn-default">
+<a href="?module=openprovider_transfers&action=export_csv" target="_blank" class="btn btn-default">
     Export as CSV
 </a>
 <a href="?module=openprovider_transfers&action=update_statuses" class="btn btn-success">
