@@ -65,6 +65,22 @@ class OpenproviderTransfersAddonHelper
         }
     }
 
+    /**
+     * Transform domain name from string to array:
+     *
+     * [
+     *      'name' => domain name,
+     *      'extension' => domain extension
+     * ]
+     *
+     * For example:
+     *
+     * any-domain.something.com => [ 'name' => 'any-domain', 'extension' => 'something.com' ]
+     *
+     * @param string $domainName
+     *
+     * @return array
+     */
     public function getDomainArray($domainName)
     {
         $explodeDomain = explode('.', $domainName);
@@ -75,6 +91,14 @@ class OpenproviderTransfersAddonHelper
         ];
     }
 
+    /**
+     * Transform Collection object to array.
+     * If argument is array, do nothing
+     *
+     * @param array|Illuminate\Support\Collection $collectionOrObject
+     *
+     * @return array[]
+     */
     public function fromCollectionOrObjectToArray($collectionOrObject)
     {
         // If $collectionOrObject is Illuminate\Support\Collection

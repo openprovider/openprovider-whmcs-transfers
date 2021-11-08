@@ -5,6 +5,7 @@
     },
     "classmap": [
       "lib/"
-    ]
+    ],
+    "files": ["helper.php"]
   }
 }

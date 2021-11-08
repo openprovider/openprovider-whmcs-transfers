@@ -10,6 +10,8 @@ class ScheduledDomainTransfer
 {
     const DATABASE_TRANSFER_SCHEDULED_DOMAINS_NAME = 'mod_openprovider_transfers_scheduled_domain_transfer';
 
+    const LIMIT_NUMBER_OF_DOMAINS_TO_UPDATE = 30;
+
     /**
      * @var OpenproviderTransfersAddonHelper
      */
@@ -91,6 +93,11 @@ class ScheduledDomainTransfer
         }
     }
 
+    /**
+     * @param $params
+     *
+     * @return bool[]|string[]|void
+     */
     public function transferDomainToOpenprovider($params)
     {
         $domainId = $params['domainid'];
@@ -281,6 +288,212 @@ class ScheduledDomainTransfer
             'status' => 'success',
             'description' => '',
         ];
+    }
+
+    public function saveDataToCsv()
+    {
+        $header = [
+            'Domain',
+            'Current registrar',
+            'Due date',
+            'Scheduled transfer date',
+            'Transfer status',
+        ];
+        $transferStatuses = [
+            'SCH' => 'scheduled',
+            'ACT' => 'successfully transferred',
+            'FAI' => 'failed',
+            'REQ' => 'transfer requested',
+        ];
+        $systemUrl = explode('/', localAPI('GetConfigurationValue', [
+            'setting' => 'systemURL'
+        ])['value']);
+        unset($systemUrl[count($systemUrl) - 1]);
+
+        $lastElement = end($systemUrl);
+        $whmcsAddress = substr(
+            $_SERVER['HTTP_REFERER'],
+            0,
+            strpos($_SERVER['HTTP_REFERER'], $lastElement) + strlen($lastElement)
+        );
+
+        $csvFileAddress = $whmcsAddress . '/modules/addons/openprovider_transfers/tmp/';
+        $relativeFolderToSave = '/../tmp/';
+
+        $delimiter = ',';
+        $filename = "data_" . date('Y-m-d') . ".csv";
+
+        $fileAbsolutePath = $csvFileAddress . $filename;
+
+        if (!is_dir(__DIR__ . $relativeFolderToSave)) {
+            mkdir(__DIR__ . $relativeFolderToSave);
+        }
+
+        $f = fopen(__DIR__ . $relativeFolderToSave . $filename, 'w');
+
+        fputcsv($f, $header, $delimiter);
+
+        $dataToSaveAsCsv = Capsule::select("
+            select motsdt.domain, motsdt.scheduled_at, motsdt.op_status,
+                   tbldomains.nextduedate, tbldomains.registrar
+            from mod_openprovider_transfers_scheduled_domain_transfer as motsdt
+            inner join tbldomains
+            on motsdt.domain_id = tbldomains.id
+        ");
+
+        foreach ($dataToSaveAsCsv as $item) {
+            $fields = [
+                $item->domain,
+                $item->registrar,
+                $item->nextduedate,
+                $item->scheduled_at,
+                $transferStatuses[$item->op_status]
+            ];
+            fputcsv($f, $fields, $delimiter);
+        }
+
+        // Move back to beginning of file
+        fseek($f, 0);
+        fclose($f);
+
+        return $fileAbsolutePath;
+    }
+
+    /**
+     * Get scheduled domains with statuses not equals ACT/FAI and synced_at older than 2 hours.
+     * Limit is 30 rows per time.
+     *
+     *
+     */
+    public function updateStatuses()
+    {
+        // Get scheduled domains with statuses not equals ACT/FAI and synced_at older than 2 hours.
+        // Limit is 30 rows per time.
+        $limitNumberOfDomains = self::LIMIT_NUMBER_OF_DOMAINS_TO_UPDATE;
+        $edgedDatetimeToSync = Carbon::now()->subHours(2)->toDateTimeString();
+        $scheduledDomains = Capsule::select("
+            select motsdt.domain_id,
+                   motsdt.domain,
+                   motsdt.op_status,
+                   motsdt.prev_registrar,
+                   motsdt.informed_below_two_weeks,
+                   tbldomains.expirydate
+            from mod_openprovider_transfers_scheduled_domain_transfer as motsdt
+            inner join tbldomains
+            on motsdt.domain_id = tbldomains.id
+            where 
+                  motsdt.domain_id 
+              and motsdt.op_status <> 'ACT' 
+              and motsdt.op_status <> 'FAI'
+              and (motsdt.synced_at is NULL or motsdt.synced_at < '{$edgedDatetimeToSync}')
+            limit {$limitNumberOfDomains};
+        ");
+
+        foreach ($scheduledDomains as $scheduledDomain) {
+            $syncedAt = Carbon::now();
+            $domainOp = $this->addonHelper->sendRequest('retrieveDomainRequest', [
+                'domain' => $this->addonHelper->getDomainArray($scheduledDomain->domain)
+            ]);
+
+            // Update status in mod_openprovider_transfers_scheduled_domain_transfer table
+            Capsule::table('mod_openprovider_transfers_scheduled_domain_transfer')
+                ->where('domain_id', $scheduledDomain->domain_id)
+                ->update([
+                    'op_status' => $domainOp['status'],
+                    'synced_at' => $syncedAt->toDateTimeString(),
+                ]);
+
+            switch ($domainOp['status']) {
+                case 'ACT':
+                    // Set finished transfer date today
+                    // And set domain status active
+                    Capsule::table('mod_openprovider_transfers_scheduled_domain_transfer')
+                        ->where('domain_id', $scheduledDomain->domain_id)
+                        ->update([
+                            'finished_transfer_date' => $syncedAt->toDateString(),
+                        ]);
+
+                    Capsule::table('tbldomains')
+                        ->where('id', $scheduledDomain->domain_id)
+                        ->update([
+                            'status' => 'Active',
+                        ]);
+                    break;
+                case 'REQ':
+                    Capsule::table('tbldomains')
+                        ->where('id', $scheduledDomain->domain_id)
+                        ->update([
+                            'status' => 'Pending Transfer',
+                        ]);
+                    if ($scheduledDomain->informed_below_two_weeks) {
+                        break;
+                    }
+
+                    // If expiry date is less than two weeks
+                    // we need to create todoitem to check if domain ok
+                    if ($syncedAt->toDateString() > Carbon::createFromFormat('Y-m-d', $scheduledDomain->expirydate)->subDays(14)->toDateString()) {
+                        Capsule::table('tbltodolist')
+                            ->insert([
+                                'title' => 'Check transfer completed',
+                                'description' => "{$scheduledDomain->domain} is still in the pending stage in Openprovider.",
+                                'status' => 'Pending',
+                                'date' => $syncedAt->toDateString(),
+                                'duedate' => $syncedAt->toDateString(),
+                            ]);
+
+                        Capsule::table('mod_openprovider_transfers_scheduled_domain_transfer')
+                            ->where('domain_id', $scheduledDomain->domain_id)
+                            ->update([
+                                'informed_below_two_weeks' => 1
+                            ]);
+                    }
+                    break;
+                case 'FAI':
+                    Capsule::table('tbldomains')
+                        ->where('id', $scheduledDomain->domain_id)
+                        ->update([
+                            'status' => 'Active',
+                            'registrar' => $scheduledDomain->prev_registrar
+                        ]);
+                    break;
+            }
+        }
+    }
+
+    public function removeAllFAIDomains()
+    {
+        Capsule::table('mod_openprovider_transfers_scheduled_domain_transfer')
+            ->where('op_status', 'FAI')
+            ->delete();
+    }
+
+    public function getRequestedTransfersDomains()
+    {
+        try {
+            $offset = ((int)$page - 1) * ((int) $numberPerPage);
+            // Select all domains that have expiry date bigger than today
+            $scheduledTransferDomains = Capsule::select("
+                select * from mod_openprovider_transfers_scheduled_domain_transfer
+                where (op_status = 'SCH' or op_status = 'REQ') and domain_id
+                in (
+                    select id from tbldomains where expirydate > CURRENT_DATE() 
+                    order by expirydate
+                )
+                order by domain
+                limit {$numberPerPage} offset {$offset}
+            ");
+            $domainsNumber = count($scheduledTransferDomains);
+            $view['scheduled_transfer_domains'] = array_map(function ($item) {
+                return (array) $item;
+            }, $scheduledTransferDomains);
+            $view['page'] = $page;
+            $view['number_per_page'] = $numberPerPage;
+            $view['domains_number'] = $domainsNumber;
+            $view['max_pages_list'] = 6;
+
+        } catch (\Exception $e) {
+            $view['error'] = $e->getMessage();
+        }
     }
 
     private function getOpenproviderScheduledTransfers($offset = 0, $limit = 1000)
