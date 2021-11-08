@@ -17,6 +17,9 @@ class ScheduledDomainTransfer
      */
     private $addonHelper;
 
+    /**
+     * @param $addonHelper
+     */
     public function setAddonHelper($addonHelper)
     {
         $this->addonHelper = $addonHelper;
@@ -34,7 +37,6 @@ class ScheduledDomainTransfer
     {
         $scheduledTransferDomains = $this->getOpenproviderScheduledTransfers();
 
-        $result = [];
         try {
             foreach ($scheduledTransferDomains as $scheduledDomain) {
                 $domainDataToInsert = [
@@ -47,18 +49,10 @@ class ScheduledDomainTransfer
                 ];
 
                 Capsule::table(self::DATABASE_TRANSFER_SCHEDULED_DOMAINS_NAME)
-                    ->updateOrInsert([
-                        'domain' => sprintf(
-                            '%s.%s',
-                            $scheduledDomain['domain']['name'], $scheduledDomain['domain']['extension']),
-                    ], [
-                        'scheduled_at' => $scheduledDomain['scheduledAt'],
-                    ]);
-
-                $result[] = array_merge($domainDataToInsert, $domainDataToUpdate);
+                    ->updateOrInsert($domainDataToInsert, $domainDataToUpdate);
             }
         } catch (\Exception $e) {
-            $result['error'] = $e->getMessage();
+            // do nothing
         }
     }
 
