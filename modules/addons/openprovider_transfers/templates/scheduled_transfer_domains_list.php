@@ -97,7 +97,7 @@ function generatePaginationUrl($page, $countPerPage) {
     <tbody>
     <tr>
         <th><?php echo 'Domain Name'; ?></th>
-        <th><?php echo 'Finished Transfer Date'; ?></th>
+        <th><?php echo 'Transfer Scheduled At'; ?></th>
         <th><?php echo 'OP Status'?></th>
     </tr>
     <?php foreach ($domains as $item): ?>
