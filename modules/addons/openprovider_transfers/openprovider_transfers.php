@@ -102,17 +102,15 @@ function openprovider_transfers_output_scheduled_transfer_domains($params)
         }
     } else if ($action == OPENPROVIDER_TRANSFERS_LOAD_SCHEDULED_TRANSFERS_ACTION) {
         $scheduledDomainTransfer->updateScheduledTransferTable();
-
         $scheduledDomainTransfer->linkDomainsToWhmcsDomains();
-
-        $domainsNumber = $scheduledDomainTransfer->getScheduledTransferDomainsNumber();
         $scheduledTransferDomains = $scheduledDomainTransfer->getScheduledTransferDomains((int) $page, (int) $numberPerPage);
+
         if (isset($scheduledTransferDomains['error'])) {
             $views['error'] = $scheduledTransferDomains['error'];
         }
 
         $views['scheduled_transfer_domains'] = $scheduledTransferDomains;
-        $views['domains_number'] = $domainsNumber;
+        $views['domains_number'] = $scheduledDomainTransfer->getScheduledTransferDomainsNumber();
     } else if ($action == OPENPROVIDER_TRANSFERS_REQUESTED_TRANSFERS_ACTION) {
         $result = $scheduledDomainTransfer->getRequestedTransfersDomains($page, $numberPerPage);
         if (isset($result['error'])) {
@@ -128,9 +126,8 @@ function openprovider_transfers_output_scheduled_transfer_domains($params)
             $views['error'] = $result['error'];
         }
 
-        $domainsNumber = $scheduledDomainTransfer->getFailedTransfersDomainsNumber();
         $views['scheduled_transfer_domains'] = $result;
-        $views['domains_number'] = $domainsNumber;
+        $views['domains_number'] = $scheduledDomainTransfer->getFailedTransfersDomainsNumber();
     } else if ($action == OPENPROVIDER_TRANSFERS_COMPLETED_TRANSFERS_ACTION) {
         $result = $scheduledDomainTransfer->getCompletedTransfersDomains($page, $numberPerPage);
 
@@ -138,9 +135,8 @@ function openprovider_transfers_output_scheduled_transfer_domains($params)
             $views['error']  = $result['error'];
         }
 
-        $domainsNumber = $scheduledDomainTransfer->getCompletedTransfersDomainsNumber();
         $views['scheduled_transfer_domains'] = $result;
-        $views['domains_number'] = $domainsNumber;
+        $views['domains_number'] = $scheduledDomainTransfer->getCompletedTransfersDomainsNumber();
     } else {
         $domainsNumber = $scheduledDomainTransfer->getScheduledTransferDomainsNumber();
         $scheduledTransferDomains = $scheduledDomainTransfer->getScheduledTransferDomains((int) $page, (int) $numberPerPage);

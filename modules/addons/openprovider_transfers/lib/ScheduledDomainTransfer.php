@@ -213,11 +213,6 @@ class ScheduledDomainTransfer
     public function getScheduledTransferDomainsNumber()
     {
         try {
-            return Capsule::select("
-                select domain_id from mod_openprovider_transfers_scheduled_domain_transfer
-                where domain_id
-            ");
-
             return Capsule::table(self::DATABASE_TRANSFER_SCHEDULED_DOMAINS_NAME)
                 ->whereNotNull('domain_id')
                 ->count();
@@ -253,13 +248,12 @@ class ScheduledDomainTransfer
     public function getRequestedTransfersDomainsNumber()
     {
         try {
-            return Capsule::query("
-                select domain_id from mod_openprovider_transfers_scheduled_domain_transfer
+            return Capsule::select("
+                select count(domain_id) as quantity from mod_openprovider_transfers_scheduled_domain_transfer
                 where (op_status = 'SCH' or op_status = 'REQ') and domain_id
                 in (
                     select id from tbldomains where expirydate > CURRENT_DATE()) 
-                ")
-                ->count();
+                ")[0]->quantity;
         } catch (\Exception $e) {
             return 0;
         }
@@ -296,14 +290,14 @@ class ScheduledDomainTransfer
         try {
             $untilDate = Carbon::now()->addDays(14)->format('Y-m-d');
 
-            return Capsule::query("
-                    select domain_id as count from mod_openprovider_transfers_scheduled_domain_transfer
+            return Capsule::select("
+                    select count(domain_id) as quantity from mod_openprovider_transfers_scheduled_domain_transfer
                     where op_status = 'FAI' or op_status = 'REQ'
                     and domain_id
                     in (
                         select id from tbldomains where expirydate < '{$untilDate}' and expirydate > CURRENT_DATE()
                     )
-                ")->count();
+                ")[0]->quantity;
         } catch (\Exception $e) {
             return 0;
         }
@@ -333,11 +327,11 @@ class ScheduledDomainTransfer
     public function getCompletedTransfersDomainsNumber()
     {
         try {
-            return Capsule::query("
-                    select domain_id as count from mod_openprovider_transfers_scheduled_domain_transfer
+            return Capsule::select("
+                    select count(domain_id) as quantity from mod_openprovider_transfers_scheduled_domain_transfer
                     where op_status = 'ACT'
                     and domain_id
-                ")->count();
+                ")[0]->quantity;
         } catch (\Exception $e) {
             return 0;
         }
