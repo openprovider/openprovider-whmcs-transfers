@@ -5,6 +5,9 @@ use WHMCS\Database\Capsule;
 
 class OpenproviderTransfersAddonHelper
 {
+    const DOWNLOAD_CSV_TEMPLATE = 'download_csv.php';
+    const SCHEDULED_TRANSFER_DOMAINS_LIST_TEMPLATE = 'scheduled_transfer_domains_list.php';
+
     private $username;
     private $password;
     private $apiClient;
@@ -89,6 +92,11 @@ class OpenproviderTransfersAddonHelper
             'name' => $explodeDomain[0],
             'extension' => str_replace($explodeDomain[0] . '.', '', $domainName)
         ];
+    }
+
+    public function renderTemplate($templateName, $views)
+    {
+        return require __DIR__ . '/templates/' . $templateName;
     }
 
     /**

@@ -1,14 +1,14 @@
 <?php
-    if (isset($view['error'])) {
-        echo $view['error'];
+    if (isset($views['error'])) {
+        echo $views['error'];
     }
 ?>
 <?php
-$domains = $view['scheduled_transfer_domains'];
-$page = $view['page'];
-$numberPerPage = $view['number_per_page'];
-$domainsNumber = $view['domains_number'];
-$maxPagesList = $view['max_pages_list'];
+$domains = $views['scheduled_transfer_domains'];
+$page = $views['page'];
+$numberPerPage = $views['number_per_page'];
+$domainsNumber = $views['domains_number'];
+$maxPagesList = $views['max_pages_list'];
 
 $pageCount = ceil($domainsNumber / $numberPerPage);
 $firstPage = $page - (int) ($maxPagesList / 2);

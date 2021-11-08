@@ -10,6 +10,15 @@ use OpenproviderTransfers\ScheduledDomainTransfer;
 use WHMCS\Database\Capsule;
 use Carbon\Carbon;
 
+const OPENPROVIDER_TRANSFERS_EXPORT_CSV_ACTION = 'export_csv';
+const OPENPROVIDER_TRANSFERS_UPDATE_STATUSES_ACTION = 'update_statuses';
+const OPENPROVIDER_TRANSFERS_REMOVE_ALL_FAI_ACTION = 'remove_all_fai';
+const OPENPROVIDER_TRANSFERS_REMOVE_ALL_ACTION = 'remove_all';
+const OPENPROVIDER_TRANSFERS_LOAD_SCHEDULED_TRANSFERS_ACTION = 'load_scheduled_transfers';
+const OPENPROVIDER_TRANSFERS_REQUESTED_TRANSFERS_ACTION = 'requested_transfers';
+const OPENPROVIDER_TRANSFERS_FAILED_TRANSFERS_ACTION = 'failed_transfers';
+const OPENPROVIDER_TRANSFERS_COMPLETED_TRANSFERS_ACTION = 'completed_transfers';
+
 function openprovider_transfers_config()
 {
     return [
@@ -60,32 +69,38 @@ function openprovider_transfers_output_scheduled_transfer_domains($params)
 
     $action = $_REQUEST['action'] ?? '';
 
-    if ($action == 'export_csv') {
+    if ($action == OPENPROVIDER_TRANSFERS_EXPORT_CSV_ACTION) {
 
         $filepath = $scheduledDomainTransfer->saveDataToCsv();
 
         $views['filepath'] = $filepath;
 
-        require __DIR__ . '/templates/download_csv.php';
-        return;
+        return $addonHelper->renderTemplate(
+            OpenproviderTransfersAddonHelper::DOWNLOAD_CSV_TEMPLATE,
+            $views
+        );
     }
 
     $page = $_REQUEST['p'] ?? '1';
     $numberPerPage = $_REQUEST['n'] ?? '30';
 
-    if ($action == 'update_statuses') {
+    $views['page'] = $page;
+    $views['number_per_page'] = $numberPerPage;
+    $views['max_pages_list'] = 6;
+
+    if ($action == OPENPROVIDER_TRANSFERS_UPDATE_STATUSES_ACTION) {
         $scheduledDomainTransfer->updateStatuses();
-    } elseif ($action == 'remove_all_fai') {
+    } elseif ($action == OPENPROVIDER_TRANSFERS_REMOVE_ALL_FAI_ACTION) {
         $scheduledDomainTransfer->removeAllFAIDomains();
     }
 
-    if ($action == 'remove_all') {
+    if ($action == OPENPROVIDER_TRANSFERS_REMOVE_ALL_ACTION) {
         $result = $scheduledDomainTransfer->removeScheduledTransferDomains();
 
         if (isset($result['error'])) {
-            $view['error'] = $result['error'];
+            $views['error'] = $result['error'];
         }
-    } else if ($action == 'load_scheduled_transfers') {
+    } else if ($action == OPENPROVIDER_TRANSFERS_LOAD_SCHEDULED_TRANSFERS_ACTION) {
         $scheduledDomainTransfer->updateScheduledTransferTable();
 
         $scheduledDomainTransfer->linkDomainsToWhmcsDomains();
@@ -93,111 +108,52 @@ function openprovider_transfers_output_scheduled_transfer_domains($params)
         $domainsNumber = $scheduledDomainTransfer->getScheduledTransferDomainsNumber();
         $scheduledTransferDomains = $scheduledDomainTransfer->getScheduledTransferDomains((int) $page, (int) $numberPerPage);
         if (isset($scheduledTransferDomains['error'])) {
-            $view['error'] = $scheduledTransferDomains['error'];
+            $views['error'] = $scheduledTransferDomains['error'];
         }
 
-        $view['scheduled_transfer_domains'] = $scheduledTransferDomains;
-        $view['page'] = $page;
-        $view['number_per_page'] = $numberPerPage;
-        $view['domains_number'] = $domainsNumber;
-        $view['max_pages_list'] = 6;
-    } else if ($action == 'requested_transfers') {
+        $views['scheduled_transfer_domains'] = $scheduledTransferDomains;
+        $views['domains_number'] = $domainsNumber;
+    } else if ($action == OPENPROVIDER_TRANSFERS_REQUESTED_TRANSFERS_ACTION) {
+        $result = $scheduledDomainTransfer->getRequestedTransfersDomains($page, $numberPerPage);
+        if (isset($result['error'])) {
+            $views['error'] = $result['error'];
+        }
 
-        $result = $scheduledDomainTransfer->getRequestedTransfersDomains();
+        $views['scheduled_transfer_domains'] = $result;
+        $views['domains_number'] = $scheduledDomainTransfer->getRequestedTransfersDomainsNumber();
+    } else if ($action == OPENPROVIDER_TRANSFERS_FAILED_TRANSFERS_ACTION) {
+        $result = $scheduledDomainTransfer->getFailedTransfersDomains($page, $numberPerPage);
 
         if (isset($result['error'])) {
-            $view['error'] = $result['error'];
+            $views['error'] = $result['error'];
         }
 
-        try {
-            $offset = ((int)$page - 1) * ((int) $numberPerPage);
-            // Select all domains that have expiry date bigger than today
-            $scheduledTransferDomains = Capsule::select("
-                select * from mod_openprovider_transfers_scheduled_domain_transfer
-                where (op_status = 'SCH' or op_status = 'REQ') and domain_id
-                in (
-                    select id from tbldomains where expirydate > CURRENT_DATE() 
-                    order by expirydate
-                )
-                order by domain
-                limit {$numberPerPage} offset {$offset}
-            ");
-            $domainsNumber = count($scheduledTransferDomains);
-            $view['scheduled_transfer_domains'] = array_map(function ($item) {
-                return (array) $item;
-            }, $scheduledTransferDomains);
-            $view['page'] = $page;
-            $view['number_per_page'] = $numberPerPage;
-            $view['domains_number'] = $domainsNumber;
-            $view['max_pages_list'] = 6;
+        $domainsNumber = $scheduledDomainTransfer->getFailedTransfersDomainsNumber();
+        $views['scheduled_transfer_domains'] = $result;
+        $views['domains_number'] = $domainsNumber;
+    } else if ($action == OPENPROVIDER_TRANSFERS_COMPLETED_TRANSFERS_ACTION) {
+        $result = $scheduledDomainTransfer->getCompletedTransfersDomains($page, $numberPerPage);
 
-        } catch (\Exception $e) {
-            $view['error'] = $e->getMessage();
+        if (isset($result['error'])) {
+            $views['error']  = $result['error'];
         }
-    } else if ($action == 'failed_transfers') {
-        try {
-            $offset = ((int)$page - 1) * ((int) $numberPerPage);
-            $untilDate = Carbon::now()->addDays(14)->format('Y-m-d');
-            // Select all domains that have expiry date bigger than today
-            $scheduledTransferDomains = Capsule::select("
-                select * from mod_openprovider_transfers_scheduled_domain_transfer
-                where op_status = 'FAI' or op_status = 'REQ'
-                and domain_id
-                in (
-                    select id from tbldomains where expirydate < '{$untilDate}' and expirydate > CURRENT_DATE()
-                    order by expirydate
-                )
-                order by domain
-                limit {$numberPerPage} offset {$offset}
-            ");
 
-            $domainsNumber = count($scheduledTransferDomains);
-            $view['scheduled_transfer_domains'] = array_map(function ($item) {
-                return (array) $item;
-            }, $scheduledTransferDomains);
-            $view['page'] = $page;
-            $view['number_per_page'] = $numberPerPage;
-            $view['domains_number'] = $domainsNumber;
-            $view['max_pages_list'] = 6;
-        } catch (\Exception $e) {
-            $view['error'] = $e->getMessage();
-        }
-    } else if ($action == 'completed_transfers') {
-        try {
-            $offset = ((int)$page - 1) * ((int) $numberPerPage);
-            // Select all domains that have expiry date bigger than today
-            $scheduledTransferDomains = Capsule::select("
-                select * from mod_openprovider_transfers_scheduled_domain_transfer
-                where op_status = 'ACT'
-                and domain_id
-                order by finished_transfer_date, domain
-                limit {$numberPerPage} offset {$offset}
-            ");
-
-            $domainsNumber = count($scheduledTransferDomains);
-            $view['scheduled_transfer_domains'] = array_map(function ($item) {
-                return (array) $item;
-            }, $scheduledTransferDomains);
-            $view['page'] = $page;
-            $view['number_per_page'] = $numberPerPage;
-            $view['domains_number'] = $domainsNumber;
-            $view['max_pages_list'] = 6;
-        } catch (\Exception $e) {
-            $view['error'] = $e->getMessage();
-        }
+        $domainsNumber = $scheduledDomainTransfer->getCompletedTransfersDomainsNumber();
+        $views['scheduled_transfer_domains'] = $result;
+        $views['domains_number'] = $domainsNumber;
     } else {
         $domainsNumber = $scheduledDomainTransfer->getScheduledTransferDomainsNumber();
         $scheduledTransferDomains = $scheduledDomainTransfer->getScheduledTransferDomains((int) $page, (int) $numberPerPage);
         if (isset($scheduledTransferDomains['error'])) {
-            $view['error'] = $scheduledTransferDomains['error'];
+            $views['error'] = $scheduledTransferDomains['error'];
         }
 
-        $view['scheduled_transfer_domains'] = $scheduledTransferDomains;
-        $view['page'] = $page;
-        $view['number_per_page'] = $numberPerPage;
-        $view['domains_number'] = $domainsNumber;
-        $view['max_pages_list'] = 6;
+        $views['scheduled_transfer_domains'] = $scheduledTransferDomains;
+        $views['domains_number'] = $domainsNumber;
     }
 
-    require __DIR__ . '/templates/scheduled_transfer_domains_list.php';
+    return $addonHelper->renderTemplate(
+        OpenproviderTransfersAddonHelper::SCHEDULED_TRANSFER_DOMAINS_LIST_TEMPLATE,
+        $views
+    );
 }

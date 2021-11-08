@@ -213,9 +213,131 @@ class ScheduledDomainTransfer
     public function getScheduledTransferDomainsNumber()
     {
         try {
+            return Capsule::select("
+                select domain_id from mod_openprovider_transfers_scheduled_domain_transfer
+                where domain_id
+            ");
+
             return Capsule::table(self::DATABASE_TRANSFER_SCHEDULED_DOMAINS_NAME)
                 ->whereNotNull('domain_id')
                 ->count();
+        } catch (\Exception $e) {
+            return 0;
+        }
+    }
+
+    public function getRequestedTransfersDomains($page = 1, $numberPerPage = 30)
+    {
+        try {
+            $offset = ((int)$page - 1) * ((int) $numberPerPage);
+            // Select all domains that have expiry date bigger than today
+            $scheduledTransferDomains = Capsule::select("
+                select * from mod_openprovider_transfers_scheduled_domain_transfer
+                where (op_status = 'SCH' or op_status = 'REQ') and domain_id
+                in (
+                    select id from tbldomains where expirydate > CURRENT_DATE() 
+                    order by expirydate
+                )
+                order by domain
+                limit {$numberPerPage} offset {$offset}
+            ");
+        } catch (\Exception $e) {
+            return [
+                'error' => $e->getMessage()
+            ];
+        }
+
+        return $this->addonHelper->fromCollectionOrObjectToArray($scheduledTransferDomains);
+    }
+
+    public function getRequestedTransfersDomainsNumber()
+    {
+        try {
+            return Capsule::query("
+                select domain_id from mod_openprovider_transfers_scheduled_domain_transfer
+                where (op_status = 'SCH' or op_status = 'REQ') and domain_id
+                in (
+                    select id from tbldomains where expirydate > CURRENT_DATE()) 
+                ")
+                ->count();
+        } catch (\Exception $e) {
+            return 0;
+        }
+    }
+
+    public function getFailedTransfersDomains($page = 1, $numberPerPage = 30)
+    {
+        try {
+            $offset = ((int)$page - 1) * ((int) $numberPerPage);
+            $untilDate = Carbon::now()->addDays(14)->format('Y-m-d');
+            // Select all domains that have expiry date bigger than today
+            $scheduledTransferDomains = Capsule::select("
+                select * from mod_openprovider_transfers_scheduled_domain_transfer
+                where op_status = 'FAI' or op_status = 'REQ'
+                and domain_id
+                in (
+                    select id from tbldomains where expirydate < '{$untilDate}' and expirydate > CURRENT_DATE()
+                    order by expirydate
+                )
+                order by domain
+                limit {$numberPerPage} offset {$offset}
+            ");
+        } catch (\Exception $e) {
+            return [
+                'error' => $e->getMessage()
+            ];
+        }
+
+        return $this->addonHelper->fromCollectionOrObjectToArray($scheduledTransferDomains);
+    }
+
+    public function getFailedTransfersDomainsNumber()
+    {
+        try {
+            $untilDate = Carbon::now()->addDays(14)->format('Y-m-d');
+
+            return Capsule::query("
+                    select domain_id as count from mod_openprovider_transfers_scheduled_domain_transfer
+                    where op_status = 'FAI' or op_status = 'REQ'
+                    and domain_id
+                    in (
+                        select id from tbldomains where expirydate < '{$untilDate}' and expirydate > CURRENT_DATE()
+                    )
+                ")->count();
+        } catch (\Exception $e) {
+            return 0;
+        }
+    }
+
+    public function getCompletedTransfersDomains($page = 1, $numberPerPage = 30)
+    {
+        try {
+            $offset = ((int)$page - 1) * ((int) $numberPerPage);
+            // Select all domains that have expiry date bigger than today
+            $scheduledTransferDomains = Capsule::select("
+                select * from mod_openprovider_transfers_scheduled_domain_transfer
+                where op_status = 'ACT'
+                and domain_id
+                order by finished_transfer_date, domain
+                limit {$numberPerPage} offset {$offset}
+            ");
+        } catch (\Exception $e) {
+            return [
+                'error' => $e->getMessage()
+            ];
+        }
+
+        return $this->addonHelper->fromCollectionOrObjectToArray($scheduledTransferDomains);
+    }
+
+    public function getCompletedTransfersDomainsNumber()
+    {
+        try {
+            return Capsule::query("
+                    select domain_id as count from mod_openprovider_transfers_scheduled_domain_transfer
+                    where op_status = 'ACT'
+                    and domain_id
+                ")->count();
         } catch (\Exception $e) {
             return 0;
         }
@@ -465,35 +587,6 @@ class ScheduledDomainTransfer
         Capsule::table('mod_openprovider_transfers_scheduled_domain_transfer')
             ->where('op_status', 'FAI')
             ->delete();
-    }
-
-    public function getRequestedTransfersDomains()
-    {
-        try {
-            $offset = ((int)$page - 1) * ((int) $numberPerPage);
-            // Select all domains that have expiry date bigger than today
-            $scheduledTransferDomains = Capsule::select("
-                select * from mod_openprovider_transfers_scheduled_domain_transfer
-                where (op_status = 'SCH' or op_status = 'REQ') and domain_id
-                in (
-                    select id from tbldomains where expirydate > CURRENT_DATE() 
-                    order by expirydate
-                )
-                order by domain
-                limit {$numberPerPage} offset {$offset}
-            ");
-            $domainsNumber = count($scheduledTransferDomains);
-            $view['scheduled_transfer_domains'] = array_map(function ($item) {
-                return (array) $item;
-            }, $scheduledTransferDomains);
-            $view['page'] = $page;
-            $view['number_per_page'] = $numberPerPage;
-            $view['domains_number'] = $domainsNumber;
-            $view['max_pages_list'] = 6;
-
-        } catch (\Exception $e) {
-            $view['error'] = $e->getMessage();
-        }
     }
 
     private function getOpenproviderScheduledTransfers($offset = 0, $limit = 1000)
