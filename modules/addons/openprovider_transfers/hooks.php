@@ -18,6 +18,8 @@ add_hook('DailyCronJob', 1, function () {
 
     $scheduledDomainTransfer->updateScheduledTransferDomains();
 
+    $scheduledDomainTransfer->linkDomainsToWhmcsDomains();
+
     $scheduledDomainTransfer->updateActiveDomains();
 
     $scheduledDomainTransfer->updateRequestedDomains();
