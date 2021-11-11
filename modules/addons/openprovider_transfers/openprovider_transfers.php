@@ -7,8 +7,6 @@ if (!defined('WHMCS')) {
 require_once 'vendor/autoload.php';
 
 use OpenproviderTransfers\ScheduledDomainTransfer;
-use WHMCS\Database\Capsule;
-use Carbon\Carbon;
 
 const OPENPROVIDER_TRANSFERS_EXPORT_CSV_ACTION = 'export_csv';
 const OPENPROVIDER_TRANSFERS_REMOVE_ALL_FAI_ACTION = 'remove_all_fai';

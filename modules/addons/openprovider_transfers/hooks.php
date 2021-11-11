@@ -8,7 +8,6 @@ require_once 'vendor/autoload.php';
 require_once 'helper.php';
 
 use OpenproviderTransfers\ScheduledDomainTransfer;
-use WHMCS\Database\Capsule;
 
 add_hook('DailyCronJob', 1, function () {
     $addonHelper = new OpenproviderTransfersAddonHelper();
