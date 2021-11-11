@@ -88,9 +88,7 @@ function openprovider_transfers_output_scheduled_transfer_domains($params)
     $views['number_per_page'] = $numberPerPage;
     $views['max_pages_list'] = 6;
 
-    if ($action == OPENPROVIDER_TRANSFERS_UPDATE_STATUSES_ACTION) {
-        $scheduledDomainTransfer->updateStatuses();
-    } elseif ($action == OPENPROVIDER_TRANSFERS_REMOVE_ALL_FAI_ACTION) {
+    if ($action == OPENPROVIDER_TRANSFERS_REMOVE_ALL_FAI_ACTION) {
         $scheduledDomainTransfer->removeAllFAIDomains();
     }
 
@@ -101,8 +99,12 @@ function openprovider_transfers_output_scheduled_transfer_domains($params)
             $views['error'] = $result['error'];
         }
     } else if ($action == OPENPROVIDER_TRANSFERS_LOAD_SCHEDULED_TRANSFERS_ACTION) {
-        $scheduledDomainTransfer->updateScheduledTransferTable();
+        $scheduledDomainTransfer->updateScheduledTransferDomains();
         $scheduledDomainTransfer->linkDomainsToWhmcsDomains();
+        $scheduledDomainTransfer->updateRequestedDomains();
+        $scheduledDomainTransfer->updateFailedDomains();
+        $scheduledDomainTransfer->updateActiveDomains();
+
         $scheduledTransferDomains = $scheduledDomainTransfer->getScheduledTransferDomains((int) $page, (int) $numberPerPage);
 
         if (isset($scheduledTransferDomains['error'])) {

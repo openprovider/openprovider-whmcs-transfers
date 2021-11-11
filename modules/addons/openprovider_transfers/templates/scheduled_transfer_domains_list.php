@@ -66,9 +66,6 @@ function generatePaginationUrl($page, $countPerPage) {
 <a href="?module=openprovider_transfers&action=export_csv" target="_blank" class="btn btn-default">
     Export as CSV
 </a>
-<a href="?module=openprovider_transfers&action=update_statuses" class="btn btn-success">
-    Update statuses (2 - 5 minutes)
-</a>
 <a href="?module=openprovider_transfers&action=load_scheduled_transfers" class="btn btn-danger">
     Load scheduled transfers (2 - 5 minutes)
 </a>
@@ -98,7 +95,7 @@ function generatePaginationUrl($page, $countPerPage) {
     <tr>
         <th><?php echo 'Domain Name'; ?></th>
         <th><?php echo 'Transfer Scheduled At'; ?></th>
-        <th><?php echo 'OP Status'?></th>
+        <th><?php echo 'Status in Openprovider'?></th>
     </tr>
     <?php foreach ($domains as $item): ?>
         <tr>
