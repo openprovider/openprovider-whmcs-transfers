@@ -66,6 +66,7 @@ function generatePaginationUrl($page, $countPerPage) {
 <a href="?module=openprovider_transfers&action=export_csv" target="_blank" class="btn btn-default">
     Export as CSV
 </a>
+<br><br>
 <a href="?module=openprovider_transfers&action=load_scheduled_transfers" class="btn btn-danger">
     Load scheduled transfers (2 - 5 minutes)
 </a>
