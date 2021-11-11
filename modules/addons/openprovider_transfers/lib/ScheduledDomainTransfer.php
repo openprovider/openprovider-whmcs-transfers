@@ -231,7 +231,7 @@ class ScheduledDomainTransfer
         }
     }
 
-    public function getRequestedTransfersDomains($page = 1, $numberPerPage = 30)
+    public function getRequestedTransferDomains($page = 1, $numberPerPage = 30)
     {
         try {
             $offset = ((int)$page - 1) * ((int) $numberPerPage);
@@ -255,7 +255,7 @@ class ScheduledDomainTransfer
         return $this->addonHelper->fromCollectionOrObjectToArray($scheduledTransferDomains);
     }
 
-    public function getRequestedTransfersDomainsNumber()
+    public function getRequestedTransferDomainsNumber()
     {
         try {
             return Capsule::select("
@@ -269,7 +269,7 @@ class ScheduledDomainTransfer
         }
     }
 
-    public function getFailedTransfersDomains($page = 1, $numberPerPage = 30)
+    public function getFailedTransferDomains($page = 1, $numberPerPage = 30)
     {
         try {
             $offset = ((int)$page - 1) * ((int) $numberPerPage);
@@ -295,7 +295,7 @@ class ScheduledDomainTransfer
         return $this->addonHelper->fromCollectionOrObjectToArray($scheduledTransferDomains);
     }
 
-    public function getFailedTransfersDomainsNumber()
+    public function getFailedTransferDomainsNumber()
     {
         try {
             $untilDate = Carbon::now()->addDays(14)->format('Y-m-d');
@@ -313,7 +313,7 @@ class ScheduledDomainTransfer
         }
     }
 
-    public function getCompletedTransfersDomains($page = 1, $numberPerPage = 30)
+    public function getCompletedTransferDomains($page = 1, $numberPerPage = 30)
     {
         try {
             $offset = ((int)$page - 1) * ((int) $numberPerPage);
@@ -334,7 +334,7 @@ class ScheduledDomainTransfer
         return $this->addonHelper->fromCollectionOrObjectToArray($scheduledTransferDomains);
     }
 
-    public function getCompletedTransfersDomainsNumber()
+    public function getCompletedTransferDomainsNumber()
     {
         try {
             return Capsule::select("
