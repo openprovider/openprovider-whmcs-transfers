@@ -40,7 +40,6 @@ class ScheduledDomainTransfer
 
     public function updateScheduledTransferDomains()
     {
-
         try {
             $this->getOpenproviderDomains('_updateScheduledTransferDomains',
                 self::OPENPROVIDER_STATUS_SCH);
