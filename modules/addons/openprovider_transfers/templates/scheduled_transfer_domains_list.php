@@ -1,6 +1,8 @@
 <?php
     if (isset($views['error'])) {
-        echo $views['error'];
+        echo "
+            <div class='errorbox'><strong><span class='title'>Error</span></strong><br>{$views['error']}</div>
+        ";
     }
 ?>
 <?php
