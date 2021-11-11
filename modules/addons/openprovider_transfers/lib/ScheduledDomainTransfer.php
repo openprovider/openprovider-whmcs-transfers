@@ -42,160 +42,33 @@ class ScheduledDomainTransfer
     {
 
         try {
-            $scheduledTransferDomains = $this->getOpenproviderDomains(self::OPENPROVIDER_STATUS_SCH);
-
-            foreach ($scheduledTransferDomains as $scheduledTransferDomain) {
-                $domainDataToInsert = [
-                    'domain' => sprintf(
-                        '%s.%s',
-                        $scheduledTransferDomain['domain']['name'], $scheduledTransferDomain['domain']['extension']),
-                ];
-                $domainDataToUpdate = [
-                    'scheduled_at' => $scheduledTransferDomain['scheduledAt'],
-                ];
-
-                Capsule::table(self::DATABASE_TRANSFER_SCHEDULED_DOMAINS_NAME)
-                    ->updateOrInsert($domainDataToInsert, $domainDataToUpdate);
-            }
+            $this->getOpenproviderDomains('_updateScheduledTransferDomains',
+                self::OPENPROVIDER_STATUS_SCH);
         } catch (\Exception $e) {}
     }
 
     public function updateActiveDomains()
     {
         try {
-            $activeDomains = $this->getOpenproviderDomains(self::OPENPROVIDER_STATUS_ACT);
-
-            foreach ($activeDomains as $domain) {
-                $domainName = sprintf(
-                    '%s.%s',
-                    $domain['domain']['name'], $domain['domain']['extension']);
-                $scheduledTransferDomainUpdate = Capsule::table(self::DATABASE_TRANSFER_SCHEDULED_DOMAINS_NAME)
-                    ->where('domain', $domainName)
-                    ->update([
-                        'op_status' => self::OPENPROVIDER_STATUS_ACT,
-                    ]);
-
-                if ($scheduledTransferDomainUpdate) {
-                    Capsule::table('tbldomains')
-                        ->where('domain', $domainName)
-                        ->update([
-                            'status' => 'Active',
-                        ]);
-                }
-            }
+            $this->getOpenproviderDomains(
+                '_updateActiveDomains',
+                self::OPENPROVIDER_STATUS_ACT);
         } catch (\Exception $e) {}
     }
 
     public function updateRequestedDomains()
     {
         try {
-            $requestedDomains = $this->getOpenproviderDomains(self::OPENPROVIDER_STATUS_REQ);
-
-            $syncedAt = Carbon::now()->toDateString();
-
-            foreach ($requestedDomains as $domain) {
-                $domainName = sprintf(
-                    '%s.%s',
-                    $domain['domain']['name'], $domain['domain']['extension']);
-
-                $scheduledTransferDomainUpdate = Capsule::table(self::DATABASE_TRANSFER_SCHEDULED_DOMAINS_NAME)
-                    ->where('domain', $domainName)
-                    ->update([
-                        'op_status' => self::OPENPROVIDER_STATUS_ACT,
-                    ]);
-
-                if ($scheduledTransferDomainUpdate) {
-                    Capsule::table('tbldomains')
-                        ->where('domain', $domainName)
-                        ->update([
-                            'status' => 'Pending Transfer',
-                        ]);
-
-                    $scheduledTransferDomain = Capsule::select("
-                        select motsdt.domain_id,
-                               motsdt.domain,
-                               motsdt.op_status,
-                               motsdt.prev_registrar,
-                               motsdt.informed_below_two_weeks,
-                               tbldomains.expirydate
-                        from mod_openprovider_transfers_scheduled_domain_transfer as motsdt
-                        inner join tbldomains
-                        on motsdt.domain_id = tbldomains.id
-                        where motsdt.domain = '{$domainName}';
-                    ");
-
-                    if ($scheduledTransferDomain->informed_below_two_weeks) {
-                        continue;
-                    }
-
-                    if ($syncedAt >
-                        Carbon::createFromFormat(
-                            'Y-m-d',
-                            $scheduledTransferDomain->expirydate
-                        )->subDays(14)->toDateString()
-                    ) {
-                        Capsule::table('tbltodolist')
-                            ->insert([
-                                'title' => 'Check transfer completed',
-                                'description' => "{$scheduledTransferDomain->domain} is still in the pending stage in Openprovider.",
-                                'status' => 'Pending',
-                                'date' => $syncedAt,
-                                'duedate' => $syncedAt,
-                            ]);
-
-                        Capsule::table('mod_openprovider_transfers_scheduled_domain_transfer')
-                            ->where('domain_id', $scheduledTransferDomain->domain_id)
-                            ->update([
-                                'informed_below_two_weeks' => 1
-                            ]);
-                    }
-
-                }
-            }
+            $this->getOpenproviderDomains('_updateRequestedDomains',
+                self::OPENPROVIDER_STATUS_REQ);
         } catch (\Exception $e) {}
     }
 
     public function updateFailedDomains()
     {
         try {
-            $failedDomains = $this->getOpenproviderDomains(self::OPENPROVIDER_STATUS_FAI);
-
-            $syncedAt = Carbon::now()->toDateString();
-
-            foreach ($failedDomains as $domain) {
-                $domainName = sprintf(
-                    '%s.%s',
-                    $domain['domain']['name'], $domain['domain']['extension']
-                );
-
-                $scheduledTransferDomain = Capsule::table(self::DATABASE_TRANSFER_SCHEDULED_DOMAINS_NAME)
-                    ->where('domain', $domainName)
-                    ->first();
-
-                if (is_null($scheduledTransferDomain)) {
-                    continue;
-                }
-
-                if ($scheduledTransferDomain->op_status == self::OPENPROVIDER_STATUS_FAI) {
-                    continue;
-                }
-
-                Capsule::table('tbldomains')
-                    ->where('id', $scheduledTransferDomain->domain_id)
-                    ->update([
-                        'status' => 'Active',
-                        'registrar' => $scheduledTransferDomain->prev_registrar
-                    ]);
-
-                Capsule::table()
-                    ->insert([
-                        'title' => 'Domain transfer to Openprovider failed',
-                        'description' => "{$scheduledTransferDomain->domain} has status FAI in Openprovider",
-                        'status' => 'Pending',
-                        'date' => $syncedAt,
-                        'duedate' => $syncedAt,
-                    ]);
-            }
+            $this->getOpenproviderDomains('_updateFailedDomains',
+                self::OPENPROVIDER_STATUS_FAI);
         } catch (\Exception $e) {}
     }
 
@@ -721,7 +594,151 @@ class ScheduledDomainTransfer
             ->delete();
     }
 
+    private function _updateFailedDomains($failedDomains)
+    {
+        $syncedAt = Carbon::now()->toDateString();
+
+        foreach ($failedDomains as $domain) {
+            $domainName = sprintf(
+                '%s.%s',
+                $domain['domain']['name'], $domain['domain']['extension']
+            );
+
+            $scheduledTransferDomain = Capsule::table(self::DATABASE_TRANSFER_SCHEDULED_DOMAINS_NAME)
+                ->where('domain', $domainName)
+                ->first();
+
+            if (is_null($scheduledTransferDomain)) {
+                continue;
+            }
+
+            if ($scheduledTransferDomain->op_status == self::OPENPROVIDER_STATUS_FAI) {
+                continue;
+            }
+
+            Capsule::table('tbldomains')
+                ->where('id', $scheduledTransferDomain->domain_id)
+                ->update([
+                    'status' => 'Active',
+                    'registrar' => $scheduledTransferDomain->prev_registrar
+                ]);
+
+            Capsule::table()
+                ->insert([
+                    'title' => 'Domain transfer to Openprovider failed',
+                    'description' => "{$scheduledTransferDomain->domain} has status FAI in Openprovider",
+                    'status' => 'Pending',
+                    'date' => $syncedAt,
+                    'duedate' => $syncedAt,
+                ]);
+        }
+    }
+
+    private function _updateRequestedDomains($requestedDomains)
+    {
+        $syncedAt = Carbon::now()->toDateString();
+
+        foreach ($requestedDomains as $domain) {
+            $domainName = sprintf(
+                '%s.%s',
+                $domain['domain']['name'], $domain['domain']['extension']);
+
+            $scheduledTransferDomainUpdate = Capsule::table(self::DATABASE_TRANSFER_SCHEDULED_DOMAINS_NAME)
+                ->where('domain', $domainName)
+                ->update([
+                    'op_status' => self::OPENPROVIDER_STATUS_ACT,
+                ]);
+
+            if ($scheduledTransferDomainUpdate) {
+                Capsule::table('tbldomains')
+                    ->where('domain', $domainName)
+                    ->update([
+                        'status' => 'Pending Transfer',
+                    ]);
+
+                $scheduledTransferDomain = Capsule::select("
+                        select motsdt.domain_id,
+                               motsdt.domain,
+                               motsdt.op_status,
+                               motsdt.prev_registrar,
+                               motsdt.informed_below_two_weeks,
+                               tbldomains.expirydate
+                        from mod_openprovider_transfers_scheduled_domain_transfer as motsdt
+                        inner join tbldomains
+                        on motsdt.domain_id = tbldomains.id
+                        where motsdt.domain = '{$domainName}';
+                    ");
+
+                if ($scheduledTransferDomain->informed_below_two_weeks) {
+                    continue;
+                }
+
+                if ($syncedAt >
+                    Carbon::createFromFormat(
+                        'Y-m-d',
+                        $scheduledTransferDomain->expirydate
+                    )->subDays(14)->toDateString()
+                ) {
+                    Capsule::table('tbltodolist')
+                        ->insert([
+                            'title' => 'Check transfer completed',
+                            'description' => "{$scheduledTransferDomain->domain} is still in the pending stage in Openprovider.",
+                            'status' => 'Pending',
+                            'date' => $syncedAt,
+                            'duedate' => $syncedAt,
+                        ]);
+
+                    Capsule::table('mod_openprovider_transfers_scheduled_domain_transfer')
+                        ->where('domain_id', $scheduledTransferDomain->domain_id)
+                        ->update([
+                            'informed_below_two_weeks' => 1
+                        ]);
+                }
+            }
+        }
+    }
+
+    private function _updateActiveDomains($activeDomains)
+    {
+        foreach ($activeDomains as $domain) {
+            $domainName = sprintf(
+                '%s.%s',
+                $domain['domain']['name'], $domain['domain']['extension']);
+            $scheduledTransferDomainUpdate = Capsule::table(self::DATABASE_TRANSFER_SCHEDULED_DOMAINS_NAME)
+                ->where('domain', $domainName)
+                ->update([
+                    'op_status' => self::OPENPROVIDER_STATUS_ACT,
+                ]);
+
+            if ($scheduledTransferDomainUpdate) {
+                Capsule::table('tbldomains')
+                    ->where('domain', $domainName)
+                    ->update([
+                        'status' => 'Active',
+                    ]);
+            }
+        }
+    }
+
+    private function _updateScheduledTransferDomains($scheduledTransferDomains)
+    {
+        foreach ($scheduledTransferDomains as $scheduledTransferDomain) {
+            $domainDataToInsert = [
+                'domain' => sprintf(
+                    '%s.%s',
+                    $scheduledTransferDomain['domain']['name'], $scheduledTransferDomain['domain']['extension']),
+            ];
+            $domainDataToUpdate = [
+                'scheduled_at' => $scheduledTransferDomain['scheduledAt'],
+            ];
+
+            Capsule::table(self::DATABASE_TRANSFER_SCHEDULED_DOMAINS_NAME)
+                ->updateOrInsert($domainDataToInsert, $domainDataToUpdate);
+        }
+    }
+
     private function getOpenproviderDomains(
+        $customFunctionToInteractWithDomains,
         $status = self::OPENPROVIDER_STATUS_SCH,
         $offset = 0,
         $limit = 1000
@@ -733,14 +750,17 @@ class ScheduledDomainTransfer
 
         try {
             $results = $this->addonHelper->sendRequest('searchDomainRequest', $filters)['results'];
+            call_user_func([$this, $customFunctionToInteractWithDomains], $results);
         } catch (\Exception $e) {
-            return [];
+            return;
         }
 
         if (!is_null($results) && count($results) == $limit) {
-            return $results + $this->getOpenproviderDomains($status, $offset + $limit, $limit);
+            $this->getOpenproviderDomains(
+                $customFunctionToInteractWithDomains,
+                $status,
+                $offset + $limit,
+                $limit);
         }
-
-        return $results;
     }
 }
