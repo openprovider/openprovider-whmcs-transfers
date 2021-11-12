@@ -8,6 +8,12 @@
 4. Click button **Configure**. Enter Openprovider credentials.
 5. Click Save Changes.
 
+## Schedule domains for transfer
+
+1. Contact Openprovider support to import domains into the Openprovider transfer robot
+2. Be sure to inform support that the domains should be imported with transfer date far into the future (2099-01-01)
+3. In this way, domains will be transferred only in the case that your end user has requested domain renewal.
+
 ## Module Usage
 
 1. WHMCS Daily cron job loads scheduled domain transfers automatically. The domains which are scheduled for transfer in Openprovider AND exist in your WHMCS instance will appear in the list of domains in the addon module.
