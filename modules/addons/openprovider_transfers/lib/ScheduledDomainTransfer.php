@@ -208,6 +208,8 @@ class ScheduledDomainTransfer
     {
         $scheduledTransferDomains = [];
         try {
+            $page = (int) $page;
+            $numberPerPage = (int) $numberPerPage;
             $limit = ($page - 1) * $numberPerPage;
             $scheduledTransferDomains = Capsule::table(self::DATABASE_TRANSFER_SCHEDULED_DOMAINS_NAME)
                 ->whereNotNull('domain_id')
@@ -239,7 +241,9 @@ class ScheduledDomainTransfer
     public function getRequestedTransferDomains($page = 1, $numberPerPage = 30)
     {
         try {
-            $offset = ((int)$page - 1) * ((int) $numberPerPage);
+            $page = (int) $page;
+            $numberPerPage = (int) $numberPerPage;
+            $offset = ($page - 1) * ($numberPerPage);
             // Select all domains that have expiry date bigger than today
             $scheduledTransferDomains = Capsule::select("
                 select * from mod_openprovider_transfers_scheduled_domain_transfer
@@ -277,7 +281,9 @@ class ScheduledDomainTransfer
     public function getFailedTransferDomains($page = 1, $numberPerPage = 30)
     {
         try {
-            $offset = ((int)$page - 1) * ((int) $numberPerPage);
+            $page = (int) $page;
+            $numberPerPage = (int) $numberPerPage;
+            $offset = ($page - 1) * ($numberPerPage);
             $untilDate = Carbon::now()->addDays(14)->format('Y-m-d');
             // Select all domains that have expiry date bigger than today
             $scheduledTransferDomains = Capsule::select("
@@ -321,7 +327,9 @@ class ScheduledDomainTransfer
     public function getCompletedTransferDomains($page = 1, $numberPerPage = 30)
     {
         try {
-            $offset = ((int)$page - 1) * ((int) $numberPerPage);
+            $page = (int) $page;
+            $numberPerPage = (int) $numberPerPage;
+            $offset = ($page - 1) * ($numberPerPage);
             // Select all domains that have expiry date bigger than today
             $scheduledTransferDomains = Capsule::select("
                 select * from mod_openprovider_transfers_scheduled_domain_transfer
